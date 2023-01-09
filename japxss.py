@@ -5,32 +5,35 @@ from Utils import Utils
 from RequestManager import RequestManager
 import time, threading
 import numpy as np
-from progress.bar import Bar
 
-def requestBlock(rm, payloads, params):
-	bar = Bar('Sending requests and check for vulns...', max=len(payloads), fill='@', suffix='%(percent).1f%% - %(eta)ds')
+def requestBlock(rm, payloads, params, u):
+	u.initProgressBar(len(payloads), '', '@')
 	for payload in payloads:
 		rm.sendPayload(payload)
 		time.sleep(params.sleep)
 		rm.checkVuln()
-		bar.next()
+		u.updateProgressBar(str(rm.getErrors()))
 		
 def main():
-	mc = Utils()
-	params = mc.getParams()
-	if mc.checkParams():
-		rm = RequestManager(params, mc)
-		wordlist = mc.readWordlist()
+	u = Utils()
+	params = u.getParams()
+	if u.checkParams():
+		rm = RequestManager(params, u)
+		wordlist = u.readWordlist()
 		payloads = []
-		for payload in wordlist:
-			payloads.append(payload.lstrip().rstrip())
+		for payload in wordlist: payloads.append(payload.lstrip().rstrip())
 		
-		if params.thread:
-			payloads = np.array_split(np.array(payloads), params.thread)
-			for payloadGroup in payloads:
-				threading.Thread(target=requestBlock, args=(rm, payloadGroup, params,)).start()
-		else:
-			threading.Thread(target=requestBlock, args=(rm, payloads, params, )).start()
-						
+		payloads = np.array_split(np.array(payloads), params.thread) if params.thread else [payloads]
+		
+		blocks = []
+		for payloadGroup in payloads:
+			t = threading.Thread(target=requestBlock, args=(rm, payloadGroup, params, u,))
+			blocks.append(t)
+			t.start()
+			
+		for block in blocks: block.join()
+		
+		rm.printFindings()
+				
 if __name__ == '__main__':
     main()

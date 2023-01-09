@@ -5,10 +5,22 @@ class RequestManager():
 	def __init__(self, params, Utils):
 		self.params = params
 		self.Utils = Utils
-		self.POST = True if params.requestData else False
-		self.urlPayload = params.urlPayload if params.requestData else params.urlPayload[0:params.urlPayload.index('?')]
+		self.params.POST_Payload = True if params.requestData else False
+		self.params.POST_Vuln = True if params.requestDataVuln else False	
 		self.__initCookies()
-		self.__initRequestData()
+		self.params.requestData = self.__initRequestData(self.params.requestData, self.params.urlPayload)
+		self.params.requestDataVuln = self.__initRequestData(self.params.requestDataVuln, self.params.urlVuln)
+		self.params.urlPayload = self.__initURL(params.requestData, params.urlPayload)
+		self.params.urlVuln = self.__initURL(params.requestDataVuln, params.urlVuln)
+		self.checkVulnErrors = 0
+		self.sendPayloadErrors = 0
+		self.findings = []
+		
+	def __initURL(self, requestData, url):
+		if requestData or '?' not in url:
+			return url
+		elif '?' in url:
+			return url[0:url.index('?')]
 		
 	def __findPayload(self, response, payload):
 		if payload in response: return True
@@ -16,30 +28,43 @@ class RequestManager():
 		if payload.replace("\"","\\\"") in response: return True
 
 	def checkVuln(self):
-		response = requests.get(self.params.urlVuln, cookies=self.params.cookies)
+		try:
+			if self.params.POST_Vuln:
+				response = requests.post(self.params.urlVuln, data=self.params.requestDataVuln, cookies=self.params.cookies)
+			elif self.params.requestDataVuln:
+				response = requests.get(self.params.urlVuln + '?' + self.__getRequestData(self.params.requestDataVuln), cookies=self.params.cookies)
+			else:
+				response = requests.get(self.params.urlVuln, cookies=self.params.cookies)
+		except:
+			self.checkVulnErrors += 1
+		
 		if self.__findPayload(response.text, self.params.requestData[self.params.injectParam]):
+			self.findings.append({'Payload': self.params.requestData[self.params.injectParam]})
 			if self.params.output: self.Utils.saveFindings(self.params)
-			print('\nFounded!! -> ' + self.params.requestData[self.params.injectParam])
 			
 	def sendPayload(self, payload):
 		self.params.requestData[self.params.injectParam] = payload
-		if self.POST:
-			res = requests.post(self.urlPayload, data = self.params.requestData, cookies = self.params.cookies)
-		else:
-			textData = ''
-			for param in self.params.requestData:
-				textData += param + '=' + data[param] + '&'
-			requests.get(self.urlPayload + '?' + textData[0:-1], cookies = self.params.cookies)
+		try:
+			if self.params.POST_Payload:
+				requests.post(self.params.urlPayload, data=self.params.requestData, cookies=self.params.cookies)
+			else:
+				requests.get(self.params.urlPayload + '?' + self.__getRequestData(self.params.requestData), cookies = self.params.cookies)
+		except:
+			self.sendPayloadErrors += 1
+	
+	def __getRequestData(self, requestData):
+		textData = ''
+		for param in requestData:
+			textData += param + '=' + data[param] + '&'
+		return textData[0:-1]
+		
 				
-	def __initRequestData(self):
+	def __initRequestData(self, requestData, url):
 		data = {}
-		if self.POST:
-			for param in self.params.requestData.split('&'):
-				data[param.split('=')[0]] = param.split('=')[1]
-		else:
-			for param in self.params.urlPayload[self.params.urlPayload.index('?')+1:].split('&'):
-				data[param.split('=')[0]] = param.split('=')[1]
-		self.params.requestData = data
+		if not requestData and '?' not in url: return {}
+		for param in (requestData.split('&') if requestData else url[url.index('?')+1:].split('&')):
+			data[param.split('=')[0]] = param.split('=')[1]
+		return data
 	
 	def __initCookies(self):
 		cookies = {}
@@ -47,3 +72,11 @@ class RequestManager():
 			for cookie in self.params.cookies.split('&'):
 				cookies[cookie[0:cookie.index('=')]] = cookie[cookie.index('=')+1:]
 		self.params.cookies = cookies
+	
+	def getErrors(self):
+		return {"vulnErrors": self.checkVulnErrors, "payloadErrors": self.sendPayloadErrors}
+	
+	def printFindings(self):
+		print('\n\nFindings: ' + str(len(self.findings)) + ' payload\n')
+		for index, finding in enumerate(self.findings):
+			print(str(index+1) + ') ' + finding['Payload'])
