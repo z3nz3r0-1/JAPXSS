@@ -18,6 +18,7 @@ class Utils:
 		parser.add_argument('--thread', '-t', help='Number of threads to use for scanning.', type=int)
 		parser.add_argument('--sleep', '-s', default=1, help='Waiting time from "sending payload request" and "check for vulnerability". Default 1 second', type=int)
 		parser.add_argument('--output', help='Save data to output file', type=str)
+		parser.add_argument('--proxy', help='Proxy address/url to use', type=str)
 		self.args = parser.parse_args()
 		return self.args
 		
@@ -37,6 +38,8 @@ class Utils:
 			check += 'The wordlist does not exist on the system'
 		if self.args.thread and self.args.thread > 5:
 			check += 'Thread count too high. Max thread 5'
+		if self.args.proxy and not re.match(urlRegex, self.args.proxy): 
+			check += 'There is an error with the proxy address/url'
 			
 		if len(check) > 7: print(check)
 		return False if len(check) > 7 else True
@@ -55,6 +58,7 @@ class Utils:
 		saveFile.close()
 	
 	def initProgressBar(self, length, suffix, fill):
+		print('\n')
 		self.progressBar = {'length': length, 'suffix': suffix, 'fill': fill, 'index': 0}
 	
 	def updateProgressBar(self, suffix):

@@ -1,4 +1,5 @@
-import requests, json
+import requests, json, warnings
+warnings.filterwarnings('ignore')
 
 class RequestManager():
 
@@ -15,6 +16,13 @@ class RequestManager():
 		self.checkVulnErrors = 0
 		self.sendPayloadErrors = 0
 		self.findings = []
+		self.__initProxy()
+		
+		
+	def __initProxy(self):
+		if self.params.proxy:
+			self.params.proxy = {"http": self.params.proxy, "https": self.params.proxy}
+		else: self.params.proxy = None
 		
 	def __initURL(self, requestData, url):
 		if requestData or '?' not in url:
@@ -28,17 +36,18 @@ class RequestManager():
 		if payload.replace("\"","\\\"") in response: return True
 
 	def checkVuln(self):
+		response = {}
 		try:
 			if self.params.POST_Vuln:
-				response = requests.post(self.params.urlVuln, data=self.params.requestDataVuln, cookies=self.params.cookies)
+				response = requests.post(self.params.urlVuln, data=self.params.requestDataVuln, cookies=self.params.cookies, proxies=self.params.proxy, verify=False)
 			elif self.params.requestDataVuln:
-				response = requests.get(self.params.urlVuln + '?' + self.__getRequestData(self.params.requestDataVuln), cookies=self.params.cookies)
+				response = requests.get(self.params.urlVuln + '?' + self.__getRequestData(self.params.requestDataVuln), cookies=self.params.cookies, proxies=self.params.proxy, verify=False)
 			else:
-				response = requests.get(self.params.urlVuln, cookies=self.params.cookies)
+				response = requests.get(self.params.urlVuln, cookies=self.params.cookies, proxies=self.params.proxy, verify=False)
 		except:
 			self.checkVulnErrors += 1
 		
-		if self.__findPayload(response.text, self.params.requestData[self.params.injectParam]):
+		if hasattr(response, 'status_code') and response.status_code == 200 and self.__findPayload(response.text, self.params.requestData[self.params.injectParam]):
 			self.findings.append({'Payload': self.params.requestData[self.params.injectParam]})
 			if self.params.output: self.Utils.saveFindings(self.params)
 			
@@ -46,9 +55,9 @@ class RequestManager():
 		self.params.requestData[self.params.injectParam] = payload
 		try:
 			if self.params.POST_Payload:
-				requests.post(self.params.urlPayload, data=self.params.requestData, cookies=self.params.cookies)
+				requests.post(self.params.urlPayload, data=self.params.requestData, cookies=self.params.cookies, proxies=self.params.proxy, verify=False)
 			else:
-				requests.get(self.params.urlPayload + '?' + self.__getRequestData(self.params.requestData), cookies = self.params.cookies)
+				requests.get(self.params.urlPayload + '?' + self.__getRequestData(self.params.requestData), cookies = self.params.cookies, proxies=self.params.proxy, verify=False)
 		except:
 			self.sendPayloadErrors += 1
 	
