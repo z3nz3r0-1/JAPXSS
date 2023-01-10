@@ -5,6 +5,14 @@ class Utils:
 	def __init__(self):
 		self.args = {}
 		self.__initParams()
+		if not self.args.quite: self.__printLogo()
+
+	def __printLogo(self):
+		print('   __     ______     ______   __  __     ______     ______    ')
+		print('  /\ \   /\  __ \   /\  == \ /\_\_\_\   /\  ___\   /\  ___\   ')
+		print(' _\_\ \  \ \  __ \  \ \  _-/ \/_/\_\/_  \ \___  \  \ \___  \  ')
+		print('/\_____\  \ \_\ \_\  \ \_\     /\_\/\_\  \/\_____\  \/\_____\ ')
+		print('\/_____/   \/_/\/_/   \/_/     \/_/\/_/   \/_____/   \/_____/ ')
 
 	def __initParams(self):
 		parser = argparse.ArgumentParser(description='Sometimes it is necessary to check if the payload works in another page. JAPXSS comes in handy and automates this process.', usage='python3 japxss.py -u "https://<YOUR_TARGET>/page1" -v "https://<YOUR_TARGET>/page2" -d "name=kevin&surname=lin&sesskey=U8AbkMluUu" -j name -w wordlist.txt --cookie "sessiontoken=75e6d7f6boa5838aee254d2b69369999"')
@@ -19,6 +27,7 @@ class Utils:
 		parser.add_argument('--sleep', '-s', default=1, help='Waiting time from "sending payload request" and "check for vulnerability". Default 1 second', type=int)
 		parser.add_argument('--output', help='Save data to output file', type=str)
 		parser.add_argument('--proxy', help='Proxy address/url to use', type=str)
+		parser.add_argument('--quite', '-q', help='Dont print the logo', action="store_true")
 		self.args = parser.parse_args()
 		return self.args
 		

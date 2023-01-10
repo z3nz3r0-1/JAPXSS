@@ -7,7 +7,7 @@ import time, threading
 import numpy as np
 
 def requestBlock(rm, payloads, params, u):
-	u.initProgressBar(len(payloads), '', '@')
+	u.initProgressBar(len(payloads), '', '#')
 	for payload in payloads:
 		rm.sendPayload(payload)
 		time.sleep(params.sleep)
